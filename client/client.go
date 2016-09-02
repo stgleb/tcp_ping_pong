@@ -29,26 +29,25 @@ type Client interface {
 }
 
 type TCPClient struct {
-	LoaderAddr string
-	LoaderPort int
-	Count      int
-	BlockSize  int
-	MinTimeout int
-	MaxTimeout int
-	Runtime    int
-	LocalAddr  string
-	LocalPort  int
-
-	Times []syscall.Tms
+	LoaderAddr      string
+	LoaderPort      int
+	LocalAddr       string
+	LocalPort       int
+	ConnectionCount int
+	BlockSize       int
+	MinTimeout      int
+	MaxTimeout      int
+	Runtime         int
+	Times           []syscall.Tms
 	sync.WaitGroup
 }
 
-func NewClient(loaderAddr string, loaderPort, count, msize, minTimeout, maxTimeout int,
-	localAddr string, localPort int, runtime int) *TCPClient {
+func NewClient(loaderAddr string, loaderPort, connectionCount, msize, minTimeout,
+	       maxTimeout int, localAddr string, localPort int, runtime int) *TCPClient {
 	return &TCPClient{
 		LoaderAddr: loaderAddr,
 		LoaderPort: loaderPort,
-		Count:      count,
+		ConnectionCount:      connectionCount,
 		BlockSize:  msize,
 		LocalAddr:  localAddr,
 		LocalPort:  localAddr,
@@ -79,7 +78,7 @@ func (client TCPClient) RunTest() {
 	readyFunc := func() {
 		conn.Write(fmt.Sprintf("%s %d %d "+
 			"%d %d %d %d", client.LocalAddr, client.LocalPort,
-			client.Count, client.Runtime, client.MinTimeout,
+			client.ConnectionCount, client.Runtime, client.MinTimeout,
 			client.MaxTimeout, client.BlockSize))
 	}
 
@@ -140,7 +139,7 @@ func (client TCPClient) worker(conn net.TCPConn) {
 
 // Wait for count connections to be established
 func (client TCPClient) prepare(masterSocket net.TCPListener) {
-	for i := 0; i < client.Count; i++ {
+	for i := 0; i < client.ConnectionCount; i++ {
 		conn, err := masterSocket.Accept()
 
 		if err != nil {

@@ -2,7 +2,7 @@ package ping_pong_client
 
 import "math"
 
-func getListenParam(count int) int {
+func getListenParam(count int) int32 {
 	if count < 15 {
 		return count / 5
 	} else if count < 100 {
