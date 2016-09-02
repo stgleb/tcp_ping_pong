@@ -1,17 +1,17 @@
 package ping_pong_client
 
 import (
-	"net"
-	"syscall"
-	"log"
-	"os"
 	"fmt"
+	"log"
+	"net"
+	"os"
 	"sync"
+	"syscall"
 )
 
 var (
 	Info *log.Logger
-	Err *log.Logger
+	Err  *log.Logger
 )
 
 func init() {
@@ -24,12 +24,11 @@ func init() {
 		log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-type Client interface{
+type Client interface {
 	RunTest()
 }
 
-
-type TCPClient struct{
+type TCPClient struct {
 	LoaderAddr string
 	LoaderPort int
 	Count      int
@@ -40,24 +39,22 @@ type TCPClient struct{
 	LocalAddr  string
 	LocalPort  int
 
-	Times      []syscall.Tms
+	Times []syscall.Tms
 	sync.WaitGroup
-
 }
 
 func NewClient(loaderAddr string, loaderPort, count, msize, minTimeout, maxTimeout int,
-               localAddr string, localPort int, runtime int) *TCPClient {
+	localAddr string, localPort int, runtime int) *TCPClient {
 	return &TCPClient{
 		LoaderAddr: loaderAddr,
 		LoaderPort: loaderPort,
-		Count: count,
-		BlockSize: msize,
-		LocalAddr: localAddr,
-		LocalPort: localAddr,
-		Runtime: runtime,
+		Count:      count,
+		BlockSize:  msize,
+		LocalAddr:  localAddr,
+		LocalPort:  localAddr,
+		Runtime:    runtime,
 	}
 }
-
 
 func (client TCPClient) RunTest() {
 	Info.Printf("Start load test on %s:%d", client.LoaderAddr, client.LoaderPort)
@@ -66,24 +63,24 @@ func (client TCPClient) RunTest() {
 
 	if err != nil {
 		Err.Printf("Error while resolving tcp addr %s",
-			   err.Error())
+			err.Error())
 	}
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 
 	defer conn.Close()
-	result := make([]byte, 1024 * 64)
+	result := make([]byte, 1024*64)
 
 	if err != nil {
 		Err.Printf("Error %s during establishing connection to %s",
-			   err.Error(), client.LoaderAddr)
+			err.Error(), client.LoaderAddr)
 		return
 	}
 
 	readyFunc := func() {
-		conn.Write(fmt.Sprintf("%s %d %d " +
-		                       "%d %d %d %d", client.LocalAddr, client.LocalPort,
-					client.Count, client.Runtime, client.MinTimeout,
-					client.MaxTimeout, client.BlockSize))
+		conn.Write(fmt.Sprintf("%s %d %d "+
+			"%d %d %d %d", client.LocalAddr, client.LocalPort,
+			client.Count, client.Runtime, client.MinTimeout,
+			client.MaxTimeout, client.BlockSize))
 	}
 
 	client.doLoad(readyFunc)
@@ -91,14 +88,14 @@ func (client TCPClient) RunTest() {
 
 	if err != nil {
 		Err.Printf("Error %s while gathering results from server",
-			   err.Error())
+			err.Error())
 		return
 	}
 }
 
 // Create tcp server on localAddr:localPort and waits for count of
 // conection to be established, then starts load on server loaderAddr:loaderPort
-func (client TCPClient) doLoad(readyFunc func()){
+func (client TCPClient) doLoad(readyFunc func()) {
 	servAddr := fmt.Sprintf("%s:%d", client.LocalAddr, client.LocalPort)
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", servAddr)
 	masterSocket, err := net.ListenTCP("tcp", tcpAddr)
@@ -128,7 +125,7 @@ func (client TCPClient) worker(conn net.TCPConn) {
 
 		if err != nil {
 			Err.Printf("Error while reading from socker %s",
-				   err.Error())
+				err.Error())
 			break
 		}
 
@@ -143,7 +140,7 @@ func (client TCPClient) worker(conn net.TCPConn) {
 
 // Wait for count connections to be established
 func (client TCPClient) prepare(masterSocket net.TCPListener) {
-	for i := 0;i < client.Count;i++ {
+	for i := 0; i < client.Count; i++ {
 		conn, err := masterSocket.Accept()
 
 		if err != nil {
@@ -160,6 +157,3 @@ func (client TCPClient) getTime() {
 	syscall.Times(&tms)
 	client.Times = append(client.Times, tms)
 }
-
-
-

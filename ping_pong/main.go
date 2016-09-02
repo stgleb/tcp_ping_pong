@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"net"
-	"time"
 	"sync"
+	"time"
 )
 
 var wg sync.WaitGroup
