@@ -42,20 +42,22 @@ type TCPClient struct {
 	sync.WaitGroup
 }
 
-func NewClient(loaderAddr string, loaderPort, connectionCount, msize, minTimeout,
-	maxTimeout int, localAddr string, localPort int, runtime int) *TCPClient {
+func NewClient(loaderAddr string, loaderPort int, localAddr string, localPort int,
+	connectionCount, msize, minTimeout, maxTimeout int, runtime int) *TCPClient {
 	return &TCPClient{
 		LoaderAddr:      loaderAddr,
 		LoaderPort:      loaderPort,
-		ConnectionCount: connectionCount,
-		BlockSize:       msize,
 		LocalAddr:       localAddr,
 		LocalPort:       localAddr,
+		MinTimeout:      minTimeout,
+		MaxTimeout:      maxTimeout,
+		ConnectionCount: connectionCount,
+		BlockSize:       msize,
 		Runtime:         runtime,
 	}
 }
 
-func (client *TCPClient) RunTest() {
+func (client *TCPClient) RunTest() Stats {
 	Info.Printf("Start load test on %s:%d", client.LoaderAddr, client.LoaderPort)
 	servAddr := fmt.Sprintf("%s:%d", client.LoaderAddr, client.LoaderPort)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", servAddr)
@@ -90,6 +92,8 @@ func (client *TCPClient) RunTest() {
 			err.Error())
 		return
 	}
+
+	return ProcessStats(result, client.Times)
 }
 
 // Create tcp server on localAddr:localPort and waits for count of

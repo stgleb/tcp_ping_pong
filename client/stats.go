@@ -11,7 +11,7 @@ type Stats struct {
 	Ctime               int64
 	MessageCount        int64
 	LatencyBase         float64
-	LatencyDistribution map[float64]float64
+	LatencyDistribution map[int]int
 	Percentiles         []float64
 }
 
@@ -36,6 +36,33 @@ func ProcessStats(data []byte, tms []syscall.Tms) Stats {
 		LatencyDistribution: latencies,
 		Percentiles:         percentiles,
 	}
+}
+
+func GetLatencies(latencies map[int]int, latencyBase int, percentiles []float64) (float64, float64, float64) {
+	allMess := 0
+
+	for i := 0; i < len(latencies); i++ {
+		allMess += latencies[i]
+	}
+
+	if allMess == 0 {
+		return 0, 0, 0
+	}
+
+	cur := 0
+	res := []float64{0, 0, 0}
+
+	for idx, val := range latencies {
+		cur += val
+
+		for index, perc := range percentiles {
+			if cur >= allMess*perc && res[index] == 0 {
+				res[index] = latencyBase * *idx
+			}
+		}
+	}
+
+	return res[0], res[1], res[2]
 }
 
 func processLatenciesAndPercentiles(latAndPerc []string) ([]int, map[int]int) {
