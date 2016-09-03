@@ -43,19 +43,19 @@ type TCPClient struct {
 }
 
 func NewClient(loaderAddr string, loaderPort, connectionCount, msize, minTimeout,
-	       maxTimeout int, localAddr string, localPort int, runtime int) *TCPClient {
+	maxTimeout int, localAddr string, localPort int, runtime int) *TCPClient {
 	return &TCPClient{
-		LoaderAddr: loaderAddr,
-		LoaderPort: loaderPort,
-		ConnectionCount:      connectionCount,
-		BlockSize:  msize,
-		LocalAddr:  localAddr,
-		LocalPort:  localAddr,
-		Runtime:    runtime,
+		LoaderAddr:      loaderAddr,
+		LoaderPort:      loaderPort,
+		ConnectionCount: connectionCount,
+		BlockSize:       msize,
+		LocalAddr:       localAddr,
+		LocalPort:       localAddr,
+		Runtime:         runtime,
 	}
 }
 
-func (client TCPClient) RunTest() {
+func (client *TCPClient) RunTest() {
 	Info.Printf("Start load test on %s:%d", client.LoaderAddr, client.LoaderPort)
 	servAddr := fmt.Sprintf("%s:%d", client.LoaderAddr, client.LoaderPort)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", servAddr)
@@ -94,7 +94,7 @@ func (client TCPClient) RunTest() {
 
 // Create tcp server on localAddr:localPort and waits for count of
 // conection to be established, then starts load on server loaderAddr:loaderPort
-func (client TCPClient) doLoad(readyFunc func()) {
+func (client *TCPClient) doLoad(readyFunc func()) {
 	servAddr := fmt.Sprintf("%s:%d", client.LocalAddr, client.LocalPort)
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", servAddr)
 	masterSocket, err := net.ListenTCP("tcp", tcpAddr)
@@ -114,7 +114,20 @@ func (client TCPClient) doLoad(readyFunc func()) {
 	client.getTime()
 }
 
-func (client TCPClient) worker(conn net.TCPConn) {
+// Wait for count connections to be established
+func (client *TCPClient) prepare(masterSocket net.TCPListener) {
+	for i := 0; i < client.ConnectionCount; i++ {
+		conn, err := masterSocket.Accept()
+
+		if err != nil {
+			Err.Printf("Error while accepting connection from server")
+		}
+		client.Add(1)
+		go client.worker(conn)
+	}
+}
+
+func (client *TCPClient) worker(conn net.TCPConn) {
 	defer conn.Close()
 	defer client.Done()
 	buffer := make([]byte, client.BlockSize)
@@ -137,21 +150,8 @@ func (client TCPClient) worker(conn net.TCPConn) {
 	}
 }
 
-// Wait for count connections to be established
-func (client TCPClient) prepare(masterSocket net.TCPListener) {
-	for i := 0; i < client.ConnectionCount; i++ {
-		conn, err := masterSocket.Accept()
-
-		if err != nil {
-			Err.Printf("Error while accepting connection from server")
-		}
-		client.Add(1)
-		go client.worker(conn)
-	}
-}
-
 // Save information about current time
-func (client TCPClient) getTime() {
+func (client *TCPClient) getTime() {
 	var tms syscall.Tms
 	syscall.Times(&tms)
 	client.Times = append(client.Times, tms)
